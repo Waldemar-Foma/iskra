@@ -1,0 +1,74 @@
+<!-- templates/logs.html (fixed) -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="logs-container">
+    <h2>Логи событий</h2>
+    
+    <div class="logs-filters">
+        <a href="{{ url_for('logs', type='all') }}" class="filter-btn {% if current_type == 'all' %}active{% endif %}">All</a>
+        <a href="{{ url_for('logs', type='interaction') }}" class="filter-btn {% if current_type == 'interaction' %}active{% endif %}">Interactions</a>
+        <a href="{{ url_for('logs', type='world') }}" class="filter-btn {% if current_type == 'world' %}active{% endif %}">World</a>
+        <a href="{{ url_for('logs', type='user') }}" class="filter-btn {% if current_type == 'user' %}active{% endif %}">User</a>
+    </div>
+    
+    <div class="logs-table-container">
+        <table class="logs-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Event</th>
+                    <th>Type</th>
+                    <th>Agents</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events.items %}
+                <tr>
+                    <td>{{ event.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td>{{ event.event_text }}</td>
+                    <td><span class="event-type {{ event.event_type }}">{{ event.event_type }}</span></td>
+                    <td>
+                        {% if event.agent1 and event.agent2 %}
+                            {{ event.agent1 }} → {{ event.agent2 }}
+                        {% elif event.agent1 %}
+                            {{ event.agent1 }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="empty-state">No events found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if events.pages > 1 %}
+    <div class="pagination">
+        {% if events.has_prev %}
+            <a href="{{ url_for('logs', page=events.prev_num, type=current_type) }}" class="page-link">←</a>
+        {% endif %}
+        
+        {% for page_num in events.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+            {% if page_num %}
+                {% if page_num == events.page %}
+                    <span class="page-link active">{{ page_num }}</span>
+                {% else %}
+                    <a href="{{ url_for('logs', page=page_num, type=current_type) }}" class="page-link">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+                <span class="page-link">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if events.has_next %}
+            <a href="{{ url_for('logs', page=events.next_num, type=current_type) }}" class="page-link">→</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

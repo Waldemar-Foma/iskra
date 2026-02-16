@@ -1,0 +1,289 @@
+<!-- templates/world.html - Полностью переработанная версия -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="world-container">
+    <!-- Заголовок -->
+    <div class="world-header">
+        <h1>🌍 Мир <span class="accent">агентов</span></h1>
+        <div class="world-controls">
+            <button class="btn btn-icon" onclick="window.location.reload()" title="Обновить">
+                <span class="icon">🔄</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Статистика мира в реальном времени -->
+    <div class="world-stats-panel">
+        <div class="stat-card">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-info">
+                <span class="stat-label">Текущий цикл</span>
+                <span class="stat-value" id="worldCycle">{{ world.cycle if world else 0 }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <span class="stat-label">Сложность</span>
+                <span class="stat-value" id="worldComplexity">{{ "%.2f"|format(world.complexity) if world else "1.00" }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+                <span class="stat-label">Всего агентов</span>
+                <span class="stat-value" id="totalAgents">{{ stats.total_agents }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-info">
+                <span class="stat-label">Средняя энергия</span>
+                <span class="stat-value" id="avgEnergy">{{ "%.2f"|format(stats.avg_energy) }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🕸️</div>
+            <div class="stat-info">
+                <span class="stat-label">Связей</span>
+                <span class="stat-value" id="totalRelationships">{{ stats.active_interactions }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">🧠</div>
+            <div class="stat-info">
+                <span class="stat-label">Воспоминаний</span>
+                <span class="stat-value" id="totalMemories">{{ stats.total_memories }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Визуализация мира -->
+    <div class="world-viz-section">
+        <h2>Карта <span class="accent">присутствия</span></h2>
+        <div class="viz-container">
+            <canvas id="worldCanvas" width="900" height="400"></canvas>
+            <div class="viz-legend">
+                <div class="legend-item">
+                    <span class="color-dot base"></span>
+                    <span>Базовая модель</span>
+                </div>
+                <div class="legend-item">
+                    <span class="color-dot advanced"></span>
+                    <span>Продвинутая модель</span>
+                </div>
+                <div class="legend-item">
+                    <span class="color-dot infinite"></span>
+                    <span>Бесконечная модель</span>
+                </div>
+                <div class="legend-item">
+                    <span class="mood-indicator happy"></span>
+                    <span>Настроение: цвет пульсации</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список агентов -->
+    <div class="agents-section">
+        <h2>Активные <span class="accent">агенты</span></h2>
+        <div class="agents-grid">
+            {% for agent in agents %}
+            <div class="agent-card" onclick="window.location.href='{{ url_for('agent_detail', name=agent.name) }}'">
+                <div class="agent-card-header">
+                    <div class="agent-avatar" data-type="{{ agent.type }}">
+                        {% if agent.type == 'Базовая' %}🌱
+                        {% elif agent.type == 'Продвинутая' %}⚡
+                        {% else %}∞{% endif %}
+                    </div>
+                    <div class="agent-info">
+                        <h3 class="agent-name">{{ agent.name }}</h3>
+                        <span class="agent-type-badge {{ agent.type.lower() }}">{{ agent.type }}</span>
+                    </div>
+                </div>
+                
+                <div class="agent-card-body">
+                    <div class="agent-mood">
+                        <span class="mood-label">Настроение:</span>
+                        <span class="mood-value" data-mood="{{ agent.mood }}">{{ agent.mood }}</span>
+                    </div>
+                    
+                    <div class="agent-energy">
+                        <span class="energy-label">Энергия:</span>
+                        <div class="energy-bar-container">
+                            <div class="energy-bar">
+                                <div class="energy-fill" style="width: {{ agent.energy * 100 }}%"></div>
+                            </div>
+                            <span class="energy-value">{{ "%.0f"|format(agent.energy * 100) }}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-position">
+                        <span class="position-label">Позиция:</span>
+                        <span class="position-value">
+                            ({{ "%.1f"|format(agent.position_x) }}, 
+                            {{ "%.1f"|format(agent.position_y) }}, 
+                            {{ "%.1f"|format(agent.position_z) }})
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="agent-card-footer">
+                    <span class="agent-last-active">Активен: {{ time_ago(agent.last_active) }}</span>
+                    <span class="agent-details-link">Подробнее →</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('worldCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    function drawWorld() {
+        fetch('/api/world-state')
+            .then(response => response.json())
+            .then(data => {
+                // Очищаем канвас
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Рисуем сетку
+                drawGrid(ctx, canvas.width, canvas.height);
+                
+                // Рисуем агентов
+                if (data.agents && data.agents.length > 0) {
+                    data.agents.forEach(agent => {
+                        drawAgent(ctx, agent, canvas.width, canvas.height);
+                    });
+                }
+                
+                // Обновляем статистику
+                updateStats(data);
+            })
+            .catch(console.error);
+    }
+    
+    function drawGrid(ctx, width, height) {
+        ctx.strokeStyle = 'rgba(2, 124, 125, 0.1)';
+        ctx.lineWidth = 1;
+        
+        // Вертикальные линии
+        for (let x = 0; x <= width; x += 50) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        }
+        
+        // Горизонтальные линии
+        for (let y = 0; y <= height; y += 50) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+        }
+        
+        // Центральные оси
+        ctx.strokeStyle = 'rgba(230, 0, 106, 0.3)';
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(width/2, 0);
+        ctx.lineTo(width/2, height);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, height/2);
+        ctx.lineTo(width, height/2);
+        ctx.stroke();
+    }
+    
+    function drawAgent(ctx, agent, width, height) {
+        // Конвертируем координаты из [-10,10] в [0,width] и [0,height]
+        const x = (agent.position[0] / 20 + 0.5) * width;
+        const y = (agent.position[1] / 20 + 0.5) * height;
+        const size = 15 + agent.energy * 10;
+        
+        // Выбираем цвет на основе типа агента
+        let baseColor;
+        if (agent.type === 'Базовая') {
+            baseColor = '#027C7D';
+        } else if (agent.type === 'Продвинутая') {
+            baseColor = '#E6006A';
+        } else {
+            baseColor = '#9b59b6';
+        }
+        
+        // Выбираем цвет пульсации на основе настроения
+        let pulseColor;
+        switch(agent.mood) {
+            case 'любопытный': pulseColor = 'rgba(46, 204, 113, 0.5)'; break;
+            case 'возбужденный': pulseColor = 'rgba(241, 196, 15, 0.5)'; break;
+            case 'уставший': pulseColor = 'rgba(155, 89, 182, 0.5)'; break;
+            case 'сфокусированный': pulseColor = 'rgba(52, 152, 219, 0.5)'; break;
+            default: pulseColor = 'rgba(149, 165, 166, 0.5)';
+        }
+        
+        // Рисуем пульсацию
+        ctx.beginPath();
+        ctx.arc(x, y, size + 5, 0, Math.PI * 2);
+        ctx.fillStyle = pulseColor;
+        ctx.fill();
+        
+        // Рисуем тень
+        ctx.shadowColor = baseColor;
+        ctx.shadowBlur = 20;
+        
+        // Рисуем агента
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fillStyle = baseColor;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Сбрасываем тень
+        ctx.shadowBlur = 0;
+        
+        // Рисуем имя
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(agent.name, x, y - size - 10);
+        
+        // Рисуем энергию
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.fillText(`⚡${agent.energy * 100}%`, x, y + size + 15);
+    }
+    
+    function updateStats(data) {
+        document.getElementById('worldCycle').textContent = data.cycle;
+        document.getElementById('worldComplexity').textContent = data.complexity.toFixed(2);
+        document.getElementById('totalAgents').textContent = data.agents.length;
+        
+        // Обновляем среднюю энергию
+        const avgEnergy = data.agents.reduce((sum, a) => sum + a.energy, 0) / data.agents.length;
+        document.getElementById('avgEnergy').textContent = avgEnergy.toFixed(2);
+        
+        // Обновляем количество связей и воспоминаний (можно добавить отдельные API позже)
+    }
+    
+    // Рисуем мир и обновляем каждые 3 секунды
+    drawWorld();
+    setInterval(drawWorld, 3000);
+});
+</script>
+{% endblock %}

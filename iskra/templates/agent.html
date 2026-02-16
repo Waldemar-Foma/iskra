@@ -1,0 +1,87 @@
+<!-- templates/agent.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="agent-detail-container">
+    <div class="agent-detail-header">
+        <a href="{{ url_for('world') }}" class="back-link">← Back to World</a>
+        <h1>Agent: <span class="accent">{{ agent.name }}</span></h1>
+    </div>
+
+    <div class="agent-detail-grid">
+        <div class="agent-info-card">
+            <h2>Status</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Type</span>
+                    <span class="info-value type-badge {{ agent.type.lower() }}">{{ agent.type }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Mood</span>
+                    <span class="info-value mood-badge" data-mood="{{ agent.mood }}">{{ agent.mood }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Energy</span>
+                    <div class="energy-display">
+                        <div class="energy-bar-large">
+                            <div class="energy-fill" style="width: {{ agent.energy * 100 }}%"></div>
+                        </div>
+                        <span>{{ "%.0f"|format(agent.energy * 100) }}%</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Position</span>
+                    <span class="info-value">({{ "%.2f"|format(agent.position_x) }}, {{ "%.2f"|format(agent.position_y) }}, {{ "%.2f"|format(agent.position_z) }})</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Created</span>
+                    <span class="info-value">{{ agent.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Last Active</span>
+                    <span class="info-value">{{ time_ago(agent.last_active) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="agent-memories-card">
+            <h2>Recent Memories</h2>
+            <div class="memories-list">
+                {% for memory in memories %}
+                <div class="memory-item" data-significance="{{ memory.significance }}">
+                    <div class="memory-header">
+                        <span class="memory-type">{{ memory.memory_type }}</span>
+                        <span class="memory-time">{{ time_ago(memory.timestamp) }}</span>
+                    </div>
+                    <div class="memory-content">{{ memory.content }}</div>
+                    <div class="memory-significance">
+                        <div class="significance-bar" style="width: {{ memory.significance * 100 }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state">No memories recorded</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="agent-interactions-card">
+            <h2>Recent Interactions</h2>
+            <div class="interactions-list">
+                {% for interaction in interactions %}
+                <div class="interaction-item">
+                    <span class="interaction-time">{{ time_ago(interaction.timestamp) }}</span>
+                    <span class="interaction-text">{{ interaction.event_text }}</span>
+                </div>
+                {% else %}
+                <div class="empty-state">No interactions recorded</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="agent-relationships-card">
+            <h2>Relationships</h2>
+            <div class="relationships-canvas" id="relationshipCanvas"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
