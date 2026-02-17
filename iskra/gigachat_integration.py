@@ -24,7 +24,7 @@ class GigaChatManager:
         Инициализация менеджера GigaChat
         credentials: строка авторизации или путь к файлу с ключом
         """
-        self.credentials ='MDE5YTI1YzEtZDg1Yy03ZDc3LWJiNmEtZTMzNDE1MzQyNTFhOmZjNDkwNGJkLTA3MDktNDdlYS05YWFjLTJiYTBiNWFjNGEwYw=='
+        self.credentials ='КЛЮЧ_ГИГА_ЧАТА'
         
         if GIGACHAT_AVAILABLE and self.credentials:
             try:
@@ -291,4 +291,5 @@ class GigaChatManager:
         return None
     
     def stop(self):
+
         self.running = False
