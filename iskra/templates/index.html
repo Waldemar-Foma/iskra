@@ -1,0 +1,185 @@
+<!-- templates/index.html - Обновленный с тремя моделями -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="glitch-title" data-text="Iskra">Iskra</h1>
+        <p class="hero-subtitle">симулятор цифрового мира</p>
+        
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="stat-value" id="totalAgents">0</span>
+                <span class="stat-label">Агентов</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="activeInteractions">0</span>
+                <span class="stat-label">Взаимодействий</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="worldComplexity">1.0</span>
+                <span class="stat-label">Сложность</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="models-section">
+    <h2 class="section-title">Модели <span class="accent">агентов</span></h2>
+    
+    <div class="models-grid">
+        <!-- Базовая модель -->
+        <div class="model-card" onclick="showModelDetails('base')">
+            <div class="card-header">
+                <div class="model-icon">🌱</div>
+                <h3>Базовая</h3>
+            </div>
+            <div class="card-body">
+                <p>Фундаментальная модель с базовыми возможностями взаимодействия. Идеальна для начала изучения.</p>
+                <ul class="model-features">
+                    <li>✓ Простые взаимодействия</li>
+                    <li>✓ Краткосрочная память</li>
+                    <li>✓ Энергоэффективность</li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <span class="model-badge">v1.0</span>
+                <span class="model-stats">⚡ 0.3/цикл</span>
+            </div>
+        </div>
+
+        <!-- Продвинутая модель -->
+        <div class="model-card featured" onclick="showModelDetails('advanced')">
+            <div class="card-header">
+                <div class="model-icon">⚡</div>
+                <h3>Продвинутая</h3>
+                <span class="featured-badge">Популярная</span>
+            </div>
+            <div class="card-body">
+                <p>Модель с расширенным интеллектом и способностью к обучению на собственном опыте.</p>
+                <ul class="model-features">
+                    <li>✓ Сложные взаимодействия</li>
+                    <li>✓ Долговременная память</li>
+                    <li>✓ Эмоциональный интеллект</li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <span class="model-badge">v2.0</span>
+                <span class="model-stats">⚡ 0.8/цикл</span>
+            </div>
+        </div>
+
+        <!-- Бесконечная модель -->
+        <div class="model-card" onclick="showModelDetails('infinite')">
+            <div class="card-header">
+                <div class="model-icon">∞</div>
+                <h3>Бесконечная</h3>
+            </div>
+            <div class="card-body">
+                <p>Экспериментальная модель с неограниченным потенциалом развития и самосознанием.</p>
+                <ul class="model-features">
+                    <li>✓ Квантовые вычисления</li>
+                    <li>✓ Самомодификация кода</li>
+                    <li>✓ Мультивселенные связи</li>
+                </ul>
+            </div>
+            <div class="card-footer">
+                <span class="model-badge">v3.0</span>
+                <span class="model-stats">⚡ 2.4/цикл</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="live-feed-section">
+    <h2 class="section-title">Прямой <span class="accent">эфир</span></h2>
+    
+    <div class="feed-container">
+        <div class="feed-header">
+            <span class="feed-title">Последние события</span>
+            <span class="feed-badge">LIVE</span>
+        </div>
+        <div class="feed-content" id="liveFeed">
+            <!-- События подгружаются через JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно с деталями модели -->
+<div class="modal" id="modelModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle"></h3>
+            <button class="modal-close">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('modelModal').classList.remove('active')">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showModelDetails(model) {
+    const modal = document.getElementById('modelModal');
+    const title = document.getElementById('modalTitle');
+    const body = document.getElementById('modalBody');
+    
+    const details = {
+        base: {
+            title: 'Базовая модель v1.0',
+            description: 'Фундаментальная модель с базовыми когнитивными функциями.',
+            specs: [
+                'Память: 128MB',
+                'Скорость: 100 операций/цикл',
+                'Энергопотребление: 0.3/цикл',
+                'Срок жизни: 1000 циклов',
+                'Особенность: Идеальна для начинающих'
+            ]
+        },
+        advanced: {
+            title: 'Продвинутая модель v2.0',
+            description: 'Модель с расширенным интеллектом и эмоциональным интеллектом.',
+            specs: [
+                'Память: 1GB',
+                'Скорость: 500 операций/цикл',
+                'Энергопотребление: 0.8/цикл',
+                'Срок жизни: 5000 циклов',
+                'Особенность: Способна к эмпатии'
+            ]
+        },
+        infinite: {
+            title: 'Бесконечная модель v3.0',
+            description: 'Экспериментальная модель с неограниченным потенциалом.',
+            specs: [
+                'Память: ∞',
+                'Скорость: 2000 операций/цикл',
+                'Энергопотребление: 2.4/цикл',
+                'Срок жизни: ∞',
+                'Особенность: Самосовершенствуется'
+            ]
+        }
+    };
+    
+    const data = details[model];
+    title.textContent = data.title;
+    body.innerHTML = `
+        <p>${data.description}</p>
+        <h4>Характеристики:</h4>
+        <ul>
+            ${data.specs.map(s => `<li>${s}</li>`).join('')}
+        </ul>
+    `;
+    
+    modal.classList.add('active');
+}
+
+// Закрытие модалки по клику вне
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('modelModal');
+    if (e.target === modal) {
+        modal.classList.remove('active');
+    }
+});
+</script>
+{% endblock %}
