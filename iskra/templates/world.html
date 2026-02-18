@@ -64,6 +64,29 @@
         </div>
     </div>
 
+        <!-- Панель управления агентами (только для подписчиков) -->
+    {% if is_logged_in() and g.user and g.user.is_active == 1 %}
+    <div class="agent-controls-panel">
+        <div class="controls-header">
+            <h3>⚙️ Управление агентами</h3>
+            <span class="controls-badge">Подписка активна</span>
+        </div>
+        <div class="controls-buttons">
+            <button class="btn btn-primary agent-control-btn" disabled title="Функция временно недоступна">
+                <span class="btn-icon">➕</span>
+                Добавить нового агента
+                <span class="btn-disabled-note">скоро</span>
+            </button>
+            <button class="btn btn-outline agent-control-btn" disabled title="Функция временно недоступна">
+                <span class="btn-icon">➖</span>
+                Удалить агента
+                <span class="btn-disabled-note">скоро</span>
+            </button>
+        </div>
+        <p class="controls-note">Функции добавления и удаления агентов появятся в ближайших обновлениях</p>
+    </div>
+    {% endif %}
+
     <!-- Визуализация мира -->
     <div class="world-viz-section">
         <h2>Карта <span class="accent">присутствия</span></h2>
@@ -143,7 +166,140 @@
         </div>
     </div>
 </div>
+<style>
+/* Стили для панели управления агентами */
+.agent-controls-panel {
+    background: linear-gradient(135deg, rgba(230, 0, 106, 0.1) 0%, rgba(2, 124, 125, 0.1) 100%);
+    border: 2px solid var(--primary);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+    position: relative;
+    overflow: hidden;
+    animation: glowPulse 3s ease infinite;
+}
 
+.agent-controls-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
+    animation: slide 3s linear infinite;
+}
+
+@keyframes slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(230, 0, 106, 0.2); }
+    50% { box-shadow: 0 0 30px rgba(2, 124, 125, 0.3); }
+}
+
+.controls-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.controls-header h3 {
+    font-size: 1.3rem;
+    margin: 0;
+    color: var(--text);
+}
+
+.controls-badge {
+    background: var(--primary);
+    color: var(--text);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.controls-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.agent-control-btn {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    position: relative;
+    opacity: 0.7;
+    cursor: not-allowed;
+    transition: all var(--transition-normal);
+}
+
+.agent-control-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.agent-control-btn .btn-icon {
+    font-size: 1.2rem;
+}
+
+.agent-control-btn .btn-disabled-note {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    background: var(--surface-light);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--primary);
+    white-space: nowrap;
+}
+
+.controls-note {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+    margin: 0;
+    text-align: center;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    .controls-buttons {
+        flex-direction: column;
+    }
+    
+    .agent-control-btn {
+        width: 100%;
+    }
+    
+    .agent-control-btn .btn-disabled-note {
+        position: static;
+        margin-left: var(--spacing-sm);
+        display: inline-block;
+        top: auto;
+        right: auto;
+    }
+    
+    .controls-header {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const canvas = document.getElementById('worldCanvas');
