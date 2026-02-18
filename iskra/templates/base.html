@@ -1,0 +1,130 @@
+<!-- templates/base.html - Обновленный с фавиконом и русским языком -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Iskra - Симулятор цифровых агентов</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Затемнение при открытом меню -->
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Хедер -->
+    <header class="site-header">
+        <div class="header-content">
+            <button class="hamburger" id="hamburgerBtn" aria-label="Меню">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="header-title">
+                <span class="logo">Iskra</span>
+                <span class="version">beta</span>
+            </div>
+            <div class="header-status" id="worldStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">Симуляция активна</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Меню -->
+    <nav class="menu" id="menu">
+        <div class="menu-header">
+            <div class="menu-logo">Iskra</div>
+            <button class="menu-close" id="menuClose">✕</button>
+        </div>
+        <ul class="menu-items">
+            {% if is_logged_in() %}
+                <li><a href="{{ url_for('dashboard') }}">Главная</a></li>
+                <li><a href="{{ url_for('graphs') }}">Граф связей</a></li>
+                <li><a href="{{ url_for('logs') }}">Логи событий</a></li>
+                <li><a href="{{ url_for('world') }}">Мир агентов</a></li>
+                <li><a href="{{ url_for('dialogues') }}">Диалоги AI</a></li>
+                <li><a href="{{ url_for('gamedev') }}">Для разработчиков игр</a></li>
+                <li class="menu-divider"></li>
+                <li><a href="{{ url_for('profile') }}">Личный кабинет</a></li>
+                <li><a href="{{ url_for('logout') }}">Выход</a></li>
+            {% else %}
+                <li><a href="{{ url_for('index') }}">Главная</a></li>
+                <li><a href="{{ url_for('graphs') }}">Граф связей</a></li>
+                <li><a href="{{ url_for('logs') }}">Логи событий</a></li>
+                <li><a href="{{ url_for('world') }}">Мир агентов</a></li>
+                <li><a href="{{ url_for('dialogues') }}">Диалоги AI</a></li>
+                <li><a href="{{ url_for('gamedev') }}">Для разработчиков игр</a></li>
+                <li class="menu-divider"></li>
+                <li><a href="{{ url_for('login') }}">Вход</a></li>
+                <li><a href="{{ url_for('register') }}">Регистрация</a></li>
+            {% endif %}
+        </ul>
+        <div class="menu-footer">
+            <div class="system-time" id="systemTime"></div>
+        </div>
+    </nav>
+
+    <!-- Flash сообщения -->
+    <div class="flash-container" id="flashContainer">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">
+                        <span class="flash-icon">{{ '✓' if category == 'success' else '⚠' }}</span>
+                        <span class="flash-text">{{ message }}</span>
+                        <button class="flash-close">✕</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Основной контент -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Футер -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Iskra</h4>
+                <p>Симулятор цифровых агентов</p>
+                <p class="copyright">© 2026 Iskra by AXL</p>
+            </div>
+            <div class="footer-section">
+                <h4>Навигация</h4>
+                <ul>
+                    <li><a href="{{ url_for('view_pdf') }}">Документация</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Статус</h4>
+                <div class="status-indicator">
+                    <span class="pulse"></span>
+                    <span id="agentCount">0</span> агентов активно
+                </div>
+                <div class="world-cycle" id="worldCycle">Цикл: 0</div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Мобильная навигация -->
+    <nav class="mobile-nav">
+        <a href="{{ url_for('dashboard') if is_logged_in() else url_for('index') }}" class="mobile-nav-item">Главная</a>
+        <a href="{{ url_for('graphs') }}" class="mobile-nav-item">Граф</a>
+        <a href="{{ url_for('logs') }}" class="mobile-nav-item">Логи</a>
+        <a href="{{ url_for('world') }}" class="mobile-nav-item">Мир</a>
+        <a href="{{ url_for('dialogues') }}" class="mobile-nav-item">Диалоги AI</a>
+        <a href="{{ url_for('gamedev') }}" class="mobile-nav-item">Для разработчиков игр</a>
+        <a href="{{ url_for('profile') if is_logged_in() else url_for('login') }}" class="mobile-nav-item">Личный кабинет</a>
+    </nav>
+
+    <!-- Кнопка наверх -->
+    <button class="back-to-top" id="backToTop" aria-label="Наверх">↑</button>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

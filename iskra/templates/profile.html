@@ -1,0 +1,152 @@
+<!-- templates/profile.html - Улучшенный личный кабинет -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Приветствие -->
+    <div class="profile-welcome">
+        <h1>Привет, <span class="accent">{{ user.username }}</span>!</h1>
+        <p>Рады видеть вас снова в симуляции</p>
+    </div>
+    
+    <!-- Статистика -->
+    <div class="profile-stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-info">
+                <span class="stat-label">С нами с</span>
+                <span class="stat-value">{{ stats.member_since }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">⏰</div>
+            <div class="stat-info">
+                <span class="stat-label">Последний визит</span>
+                <span class="stat-value">{{ stats.last_active }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <span class="stat-label">Ваши события</span>
+                <span class="stat-value">{{ stats.events_count }}</span>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-info">
+                <span class="stat-label">Активность</span>
+                <span class="stat-value">{{ 'Высокая' if stats.events_count > 10 else 'Средняя' if stats.events_count > 5 else 'Низкая' }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Табы с настройками -->
+    <div class="profile-tabs">
+        <button class="tab-btn active" onclick="switchTab('profile')">👤 Профиль</button>
+        <button class="tab-btn" onclick="switchTab('security')">🔒 Безопасность</button>
+        <button class="tab-btn" onclick="switchTab('preferences')">⚙️ Настройки</button>
+    </div>
+    
+    <!-- Вкладка Профиль -->
+    <div id="tab-profile" class="tab-content active">
+        <div class="profile-card">
+            <h3>Редактировать профиль</h3>
+            <form method="POST" action="{{ url_for('profile') }}" class="profile-form">
+                <input type="hidden" name="action" value="update_profile">
+                
+                <div class="form-group">
+                    <label for="username">Имя пользователя</label>
+                    <input type="text" id="username" name="username" value="{{ user.username }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="{{ user.email }}" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Вкладка Безопасность -->
+    <div id="tab-security" class="tab-content">
+        <div class="profile-card">
+            <h3>Изменить пароль</h3>
+            <form method="POST" action="{{ url_for('profile') }}" class="profile-form">
+                <input type="hidden" name="action" value="update_password">
+                
+                <div class="form-group">
+                    <label for="current_password">Текущий пароль</label>
+                    <input type="password" id="current_password" name="current_password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="new_password">Новый пароль</label>
+                    <input type="password" id="new_password" name="new_password" required>
+                    <small class="hint">Минимум 6 символов</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password">Подтвердите пароль</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Обновить пароль</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Вкладка Настройки -->
+    <div id="tab-preferences" class="tab-content">
+        <div class="profile-card">
+            <h3>Настройки интерфейса</h3>
+            <form method="POST" action="{{ url_for('profile') }}" class="profile-form">
+                <input type="hidden" name="action" value="update_preferences">
+                
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" name="notifications" {% if preferences.get('notifications') %}checked{% endif %}>
+                        Включить уведомления
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="theme">Тема оформления</label>
+                    <select id="theme" name="theme">
+                        <option value="dark" {% if preferences.get('theme') == 'dark' %}selected{% endif %}>Темная</option>
+                        <option value="light" {% if preferences.get('theme') == 'light' %}selected{% endif %}>Светлая</option>
+                        <option value="auto" {% if preferences.get('theme') == 'auto' %}selected{% endif %}>Как в системе</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="language">Язык</label>
+                    <select id="language" name="language">
+                        <option value="ru" {% if preferences.get('language') == 'ru' %}selected{% endif %}>Русский</option>
+                        <option value="en" {% if preferences.get('language') == 'en' %}selected{% endif %}>English</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(tab) {
+    // Обновляем табы
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Обновляем контент
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+}
+</script>
+{% endblock %}

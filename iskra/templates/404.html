@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-illustration">
+        <div class="error-404">
+            <span>4</span>
+            <span class="zero">0</span>
+            <span>4</span>
+        </div>
+        <div class="error-robot">
+            🤖
+        </div>
+    </div>
+    
+    <h1 class="error-title">Ой! Кажется, вы забрели в неизведанный сектор</h1>
+    
+    <p class="error-message">
+        Похоже, страница не найдена. Даже наш самый умный ИИ не смог её отыскать, 
+        хотя очень старался и даже немного расстроился 😔
+    </p>
+    
+    <div class="error-suggestion">
+        <p>Может быть, вы ищете что-то из этого?</p>
+        <div class="error-links">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">🏠 На главную</a>
+            <a href="{{ url_for('graphs') }}" class="btn btn-outline">🕸️ Граф связей</a>
+            <a href="{{ url_for('world') }}" class="btn btn-outline">🌍 Мир агентов</a>
+        </div>
+    </div>
+    
+    <div class="error-fun-fact">
+        <small>Кстати, в нашей симуляции уже {{ random_cycles }} циклов, а вы переживаете из-за какой-то странички</small>
+    </div>
+</div>
+{% endblock %}
