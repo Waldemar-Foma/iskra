@@ -1,0 +1,335 @@
+<!-- templates/index.html - Обновленный с тремя моделями -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="glitch-title" data-text="Iskra">Iskra</h1>
+        <p class="hero-subtitle">симулятор цифрового мира</p>
+        
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="stat-value" id="totalAgents">0</span>
+                <span class="stat-label">Агентов</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="activeInteractions">0</span>
+                <span class="stat-label">Взаимодействий</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="worldComplexity">1.0</span>
+                <span class="stat-label">Сложность</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Секция описания проекта -->
+<section class="description-section">
+    <div class="description-container">
+        <h2 class="section-title">О <span class="accent">проекте</span></h2>
+        
+        <div class="description-content">
+            <div class="description-text">
+                <p class="lead-text"><span class="accent">Iskra</span> — это эволюционирующая экосистема автономных агентов, где каждый обладает уникальным характером, памятью и способностью к взаимодействию.</p>
+                
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <span class="feature-icon">🧠</span>
+                        <h4>Искусственный интеллект</h4>
+                        <p>Агенты принимают решения на основе контекста, настроения и предыдущего опыта</p>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <span class="feature-icon">🌍</span>
+                        <h4>Живой мир</h4>
+                        <p>Среда эволюционирует, появляются новые локации и возможности для взаимодействия</p>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <span class="feature-icon">⚡</span>
+                        <h4>Три модели агентов</h4>
+                        <p>Базовая, Продвинутая и Бесконечная — каждая со своим уровнем сложности и способностями</p>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <h4>Визуализация в реальном времени</h4>
+                        <p>Наблюдайте за связями, энергией и настроением агентов в динамическом графе</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Секция с видео -->
+<section class="video-section">
+    <div class="video-container">
+        <h2 class="section-title">Как это <span class="accent">работает</span></h2>
+        
+        <div class="video-wrapper">
+            <!-- Здесь можно вставить iframe с YouTube/Vimeo или ссылку на локальное видео -->
+            <div class="video-placeholder">
+                <div class="video-overlay">
+                    <span class="play-icon">▶</span>
+                </div>
+                <img src="{{ url_for('static', filename='video/video-preview.jpg') }}" alt="Превью видео" class="video-preview">
+                <p class="video-caption">Демонстрация работы симулятора Iskra</p>
+            </div>
+        </div>
+        
+        <div class="video-description">
+            <p>В этом видео показано, как агенты взаимодействуют друг с другом, обмениваются энергией и формируют социальные связи в цифровом мире Iskra.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Секция призыва к действию -->
+<section class="cta-section">
+    <div class="cta-container">
+        <h2>Готовы исследовать <span class="accent">цифровой мир</span>?</h2>
+        <p>Создайте своего первого агента и наблюдайте за эволюцией</p>
+        <div class="cta-buttons">
+            <a href="/register" class="btn btn-primary">Начать сейчас</a>
+            <a href="/world" class="btn btn-outline">Перейти к миру</a>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработка видео-плейсхолдера (если нужно открыть модалку с видео)
+    const videoPlaceholder = document.querySelector('.video-placeholder');
+    if (videoPlaceholder) {
+        videoPlaceholder.addEventListener('click', function() {
+            // Здесь можно открыть модальное окно с видео
+            alert('Здесь будет видео-проигрыватель');
+            // Или перенаправить на YouTube
+            // window.open('https://youtube.com/watch?v=YOUR_VIDEO_ID', '_blank');
+        });
+    }
+    
+    // Кнопка "Смотреть полное демо"
+    const demoBtn = document.getElementById('watchDemoBtn');
+    if (demoBtn) {
+        demoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            alert('Открытие полной версии видео');
+        });
+    }
+});
+</script>
+
+<style>
+/* Дополнительные стили для новых секций (можно добавить в style.css) */
+.description-section {
+    padding: var(--spacing-xxl) 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(2, 124, 125, 0.05) 100%);
+}
+
+.description-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+}
+
+.lead-text {
+    font-size: 1.3rem;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto var(--spacing-xl);
+    line-height: 1.8;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-xl);
+    margin-top: var(--spacing-xl);
+}
+
+.feature-item {
+    text-align: center;
+    padding: var(--spacing-lg);
+    background: rgba(21, 21, 21, 0.5);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid rgba(2, 124, 125, 0.2);
+    transition: all var(--transition-normal);
+}
+
+.feature-item:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--spacing-md);
+}
+
+.feature-item h4 {
+    color: var(--primary);
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.2rem;
+}
+
+.feature-item p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.video-section {
+    padding: var(--spacing-xxl) 0;
+}
+
+.video-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-xl);
+}
+
+.video-wrapper {
+    margin: var(--spacing-xl) 0;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+}
+
+.video-placeholder {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* 16:9 */
+    background: var(--surface);
+    cursor: pointer;
+}
+
+.video-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: background var(--transition-normal);
+}
+
+.video-placeholder:hover .video-overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.play-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    box-shadow: var(--shadow-glow);
+    transition: all var(--transition-normal);
+}
+
+.video-placeholder:hover .play-icon {
+    transform: scale(1.1);
+    background: var(--secondary);
+}
+
+.video-caption {
+    position: absolute;
+    bottom: var(--spacing-md);
+    left: var(--spacing-md);
+    color: white;
+    background: rgba(0, 0, 0, 0.7);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: 20px;
+    font-size: 0.9rem;
+    z-index: 2;
+}
+
+.video-description {
+    text-align: center;
+    margin-top: var(--spacing-xl);
+}
+
+.video-description p {
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto var(--spacing-lg);
+}
+
+.cta-section {
+    padding: var(--spacing-xxl) 0;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(230, 0, 106, 0.1) 0%, rgba(2, 124, 125, 0.1) 100%);
+    border-radius: var(--border-radius-lg);
+    margin: var(--spacing-xxl) auto;
+    max-width: 1000px;
+}
+
+.cta-container {
+    padding: var(--spacing-xxl);
+}
+
+.cta-container h2 {
+    font-size: 2.5rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.cta-container p {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    margin-bottom: var(--spacing-xl);
+}
+
+.cta-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+}
+
+@media (max-width: 1024px) {
+    .feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cta-container {
+        padding: var(--spacing-xl);
+    }
+    
+    .cta-container h2 {
+        font-size: 2rem;
+    }
+    
+    .cta-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

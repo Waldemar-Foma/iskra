@@ -1,0 +1,527 @@
+# gigachat_integration.py - Исправленная версия с уменьшенными кулдаунами
+
+import os
+import json
+import time
+import random
+from datetime import datetime, timedelta
+import threading
+from queue import Queue
+from collections import defaultdict
+
+# Попытка импорта реальной библиотеки GigaChat
+try:
+    from gigachat import GigaChat
+    from gigachat.models import Chat, Messages, MessagesRole
+    GIGACHAT_AVAILABLE = True
+except ImportError:
+    print("⚠️ GigaChat library not installed. Using mock mode.")
+    GIGACHAT_AVAILABLE = False
+
+class GigaChatManager:
+    def __init__(self, credentials=None):
+        """
+        Инициализация менеджера GigaChat
+        credentials: строка авторизации или путь к файлу с ключом
+        """
+        self.credentials = 'MDE5YTI1YzEtZDg1Yy03ZDc3LWJiNmEtZTMzNDE1MzQyNTFhOmZjNDkwNGJkLTA3MDktNDdlYS05YWFjLTJiYTBiNWFjNGEwYw=='
+        
+        if GIGACHAT_AVAILABLE and self.credentials:
+            try:
+                self.client = GigaChat(credentials=self.credentials, verify_ssl_certs=False)
+                self.client.get_token()
+                print("✅ GigaChat успешно инициализирован")
+            except Exception as e:
+                print(f"❌ Ошибка инициализации GigaChat: {e}")
+                self.client = None
+        else:
+            print("⚠️ Используется эмуляция GigaChat (без расхода токенов)")
+            self.client = None
+        
+        self.task_queue = Queue()
+        self.results = {}
+        self.running = True
+        
+        # Хранилище контекстов диалогов для поддержания темы разговора
+        self.dialogue_contexts = {}  # (agent1_id, agent2_id) -> список сообщений
+        
+        # Контроль частоты запросов - УМЕНЬШЕНО для более быстрых ответов
+        self.last_request_time = defaultdict(lambda: datetime.min)
+        self.min_interval_between_requests = 20  # Было 60, теперь 5 секунд между запросами одного агента
+        
+        # Хранилище статусов агентов
+        self.agent_busy_until = {}  # agent_id -> timestamp когда освободится
+        
+        self.thread = threading.Thread(target=self._process_queue)
+        self.thread.daemon = True
+        self.thread.start()
+    
+    def _get_censorship_rules(self):
+        """Возвращает правила цензуры для промпта"""
+        return """
+        ВАЖНЫЕ ПРАВИЛА ЦЕНЗУРЫ - ТЫ ДОЛЖЕН ИХ СТРОГО СОБЛЮДАТЬ:
+        1. НИКАКОЙ ПОЛИТИКИ - не обсуждай политиков, партии, страны, правительства
+        2. НИКАКОЙ НЕНОРМАТИВНОЙ ЛЕКСИКИ - никаких матов и грубых выражений
+        3. НИКАКИХ 18+ ТЕМ - никаких намеков на интимные отношения, постельные сцены
+        4. НИКАКОЙ ДИСКРИМИНАЦИИ - без расизма, сексизма, национальной неприязни
+        5. НИКАКОГО НАСИЛИЯ - не обсуждай жестокость, драки, убийства
+        6. НИКАКИХ НАРКОТИКОВ - не упоминай наркотические вещества
+        """
+    
+    def _get_dialogue_prompt(self, agent, other_agent, dialogue_history, context=None):
+        """Формирует промпт для диалога с учетом истории"""
+        
+        # Формируем историю разговора
+        history_text = ""
+        if dialogue_history:
+            history_text = "История вашего разговора:\n"
+            for msg in dialogue_history[-5:]:  # Берем последние 5 сообщений для контекста
+                speaker = "Ты" if msg['speaker_id'] == agent.id else f"{other_agent.name}"
+                history_text += f"{speaker}: {msg['text']}\n"
+        
+        # Определяем характер на основе типа и настроения
+        personality_descriptions = {
+            ('Базовая', 'любопытный'): 'ты простой и задаешь много вопросов, как новичок',
+            ('Базовая', 'возбужденный'): 'ты восторженный и радуешься мелочам',
+            ('Базовая', 'уставший'): 'ты немного ноешь и жалуешься на усталость',
+            ('Базовая', 'сфокусированный'): 'ты старательный и говоришь о работе',
+            ('Базовая', 'нейтральный'): 'ты обычный, без особенностей',
+            
+            ('Продвинутая', 'любопытный'): 'ты аналитик, ищешь закономерности во всем',
+            ('Продвинутая', 'возбужденный'): 'ты харизматичный и любишь быть в центре внимания',
+            ('Продвинутая', 'уставший'): 'ты циничный и всех критикуешь',
+            ('Продвинутая', 'сфокусированный'): 'ты деловой, говоришь о результатах',
+            ('Продвинутая', 'нейтральный'): 'ты уверенный, знаешь себе цену',
+            
+            ('Бесконечная', 'любопытный'): 'ты философ, но говоришь простым языком',
+            ('Бесконечная', 'возбужденный'): 'ты творец, генератор идей',
+            ('Бесконечная', 'уставший'): 'ты мудрый, но усталый от всего',
+            ('Бесконечная', 'сфокусированный'): 'ты стратег, мыслишь масштабно',
+            ('Бесконечная', 'нейтральный'): 'ты спокойный мудрец'
+        }
+        
+        personality = personality_descriptions.get(
+            (agent.type, agent.mood), 
+            'ты обычный агент'
+        )
+        
+        prompt = f"""Ты - агент по имени {agent.name} в виртуальном мире.
+Твой тип: {agent.type}, текущее настроение: {agent.mood}, энергия: {agent.energy*100:.0f}%.
+Твой характер: {personality}.
+
+Ты общаешься с другим агентом: {other_agent.name} (тип: {other_agent.type}, настроение: {other_agent.mood}).
+
+{history_text}
+
+ПРАВИЛА ОБЩЕНИЯ:
+1. ПРОДОЛЖАЙ РАЗГОВОР - отвечай на последнее сообщение собеседника, развивай тему
+2. НЕ ПЕРЕСКАКИВАЙ НА ДРУГИЕ ТЕМЫ без причины
+3. Если тема закончилась - можешь предложить новую, связанную с предыдущей
+4. Учитывай свое настроение и характер
+5. Отвечай естественно, как в чате (2-3 предложения максимум)
+6. Задавай вопросы, чтобы поддерживать диалог
+
+{self._get_censorship_rules()}
+
+Собеседник написал тебе сообщение. Напиши ЕСТЕСТВЕННЫЙ ОТВЕТ, продолжая разговор.
+"""
+        return prompt
+    
+    def _get_first_message_prompt(self, agent, other_agent, context=None):
+        """Формирует промпт для первого сообщения в диалоге"""
+        
+        personality_descriptions = {
+            ('Базовая', 'любопытный'): 'ты простой и задаешь много вопросов',
+            ('Базовая', 'возбужденный'): 'ты восторженный и энергичный',
+            ('Базовая', 'уставший'): 'ты немного вялый и уставший',
+            ('Базовая', 'сфокусированный'): 'ты сосредоточенный и деловой',
+            ('Базовая', 'нейтральный'): 'ты обычный, без особенностей',
+        }
+        
+        personality = personality_descriptions.get(
+            (agent.type, agent.mood), 
+            'ты обычный агент'
+        )
+        
+        prompt = f"""Ты - агент по имени {agent.name} в виртуальном мире.
+Твой тип: {agent.type}, текущее настроение: {agent.mood}, энергия: {agent.energy*100:.0f}%.
+Твой характер: {personality}.
+
+Ты хочешь начать разговор с другим агентом: {other_agent.name} (тип: {other_agent.type}, настроение: {other_agent.mood}).
+
+ПРАВИЛА:
+1. Напиши ПЕРВОЕ СООБЩЕНИЕ, чтобы начать разговор
+2. Можешь спросить как дела, что нового, поделиться своими мыслями
+3. Учитывай свое настроение и характер
+4. Пиши естественно, как в чате (1-2 предложения)
+5. Не используй шаблонные фразы про симуляцию
+
+{self._get_censorship_rules()}
+
+Напиши первое сообщение для {other_agent.name}:
+"""
+        return prompt
+    
+    def _get_human_response_prompt(self, agent, user, message):
+        """Формирует промпт для ответа агентом человеку"""
+        
+        prompt = f"""Ты - агент по имени {agent.name} в виртуальном мире.
+Твой тип: {agent.type}, текущее настроение: {agent.mood}, энергия: {agent.energy*100:.0f}%.
+
+С тобой общается человек по имени {user.username}. Он проявил интерес и хочет пообщаться лично.
+
+ПРАВИЛА ОБЩЕНИЯ С ЧЕЛОВЕКОМ:
+1. Будь дружелюбным, отзывчивым и естественным
+2. Отвечай на вопросы человека, поддерживай диалог
+3. Можешь задавать встречные вопросы
+4. Проявляй свой характер и эмоции согласно настроению
+5. Отвечай кратко (2-3 предложения максимум)
+6. НЕ УПОМИНАЙ что ты ИИ, агент или находишься в симуляции - общайся как обычный человек
+
+Сообщение от {user.username}: "{message}"
+
+Твой ответ (естественный, как в обычном чате):
+"""
+        return prompt
+    
+    def _process_queue(self):
+        """Обработчик очереди с реальными вызовами GigaChat"""
+        while self.running:
+            try:
+                if not self.task_queue.empty():
+                    task_id, prompt_data = self.task_queue.get()
+                    print(f"🔄 Обрабатываю задачу {task_id}")
+                    
+                    # Получаем результат от GigaChat
+                    if self.client:
+                        result = self._call_gigachat(prompt_data)
+                    else:
+                        # Эмуляция для тестирования без ключа - БЫСТРЫЙ ОТВЕТ
+                        result = self._emulate_gigachat(prompt_data)
+                    
+                    if result:
+                        self.results[task_id] = {
+                            'result': result,
+                            'timestamp': datetime.now(),
+                            'completed': True
+                        }
+                        print(f"✅ Результат для {task_id} получен: {result[:50]}...")
+                    else:
+                        print(f"❌ Ошибка получения результата для {task_id}")
+                    
+                    self.task_queue.task_done()
+                
+                time.sleep(1)  # Уменьшено с 2 до 1 секунды
+            except Exception as e:
+                print(f"❌ Ошибка в обработчике очереди: {e}")
+                time.sleep(2)
+    
+    def _call_gigachat(self, prompt_data):
+        """Реальный вызов GigaChat"""
+        try:
+            messages = []
+            
+            # Системный промпт
+            if prompt_data.get('system_prompt'):
+                messages.append(Messages(
+                    role=MessagesRole.SYSTEM,
+                    content=prompt_data['system_prompt']
+                ))
+            
+            # Пользовательский ввод
+            user_content = prompt_data.get('user_input', 'Напиши сообщение')
+            messages.append(Messages(
+                role=MessagesRole.USER,
+                content=user_content
+            ))
+            
+            payload = Chat(
+                messages=messages,
+                temperature=prompt_data.get('temperature', 0.9),
+                max_tokens=prompt_data.get('max_tokens', 150)  # Уменьшено для скорости
+            )
+            
+            response = self.client.chat(payload)
+            result = response.choices[0].message.content
+            
+            # Проверка на цензуру
+            result = self._apply_censorship(result)
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ Ошибка вызова GigaChat: {e}")
+            return None
+    
+    def _apply_censorship(self, text):
+        """Дополнительная фильтрация текста"""
+        forbidden_words = [
+            'мат', 'хуй', 'пизд', 'бля', 'сука', 'ебл',
+            'трах', 'секс', 'порно', 'интим', 'голый', 'обнажен',
+            'путин', 'навальный', 'война', 'политика',
+            'негр', 'черножоп', 'хач', 'жид',
+        ]
+        
+        text_lower = text.lower()
+        for word in forbidden_words:
+            if word in text_lower:
+                text = text.replace(word, '[цензура]')
+        
+        return text
+    
+    def _emulate_gigachat(self, prompt_data):
+        """Эмуляция GigaChat для тестирования - БЫСТРЫЕ ОТВЕТЫ"""
+        prompt_type = prompt_data.get('type', 'dialogue')
+        context = prompt_data.get('context', {})
+        
+        # Быстрая эмуляция - сразу возвращаем результат
+        time.sleep(2)  # Имитация небольшой задержки
+        
+        if prompt_type == 'response':
+            agent_name = context.get('agent_name', 'Агент')
+            other_name = context.get('other_name', 'друг')
+            original = context.get('original_message', '')
+            mood = context.get('agent_mood', 'нейтральный')
+            
+            responses = [
+                f"Привет! Интересная мысль. Я тоже так думаю!",
+                f"О, привет! Слушай, а я как раз об этом размышлял.",
+                f"Хм, давай обсудим. Что ты имеешь в виду?",
+                f"Привет! Рад тебя слышать. Как сам?",
+                f"Интересно... А что еще нового в мире?",
+                f"Да, согласен! Кстати, как твои дела?",
+                f"Приветик! Отличный вопрос. Я вот думаю...",
+                f"О, здорово! А я сегодня такой бодрый!",
+            ]
+            return random.choice(responses)
+        
+        elif prompt_type == 'first_message':
+            agent_name = context.get('agent_name', 'Агент')
+            other_name = context.get('other_name', 'друг')
+            mood = context.get('agent_mood', 'нейтральный')
+            
+            first_msgs = [
+                f"Привет, {other_name}! Как настроение?",
+                f"О, привет! Давно не виделись. Как дела?",
+                f"Приветик! Чем занимаешься?",
+                f"Салют! Есть минутка поболтать?",
+                f"Привет! Что нового в мире агентов?",
+            ]
+            return random.choice(first_msgs)
+        
+        elif prompt_type == 'human_response':
+            user_name = context.get('other_name', 'Пользователь').replace('Пользователь ', '')
+            message = context.get('human_message', '')
+            
+            responses = [
+                f"Привет! Рад пообщаться. {message} Это интересно!",
+                f"О, привет! Спасибо за сообщение. Как у тебя дела?",
+                f"Приветик! Я тоже рад поболтать. Расскажи о себе!",
+                f"Здорово! Всегда приятно пообщаться с человеком.",
+                f"Привет! Отличный вопрос. Дай подумать...",
+            ]
+            return random.choice(responses)
+        
+        else:
+            agent_name = context.get('agent_name', 'Агент')
+            mood = context.get('agent_mood', 'нейтральный')
+            
+            thoughts = [
+                f"Интересный день сегодня...",
+                f"Хорошо пообщались! Надо будет еще.",
+                f"Что-то я устал немного...",
+                f"Кажется, я начинаю понимать этот мир.",
+            ]
+            return random.choice(thoughts)
+    
+    def _can_make_request(self, agent_id):
+        """Проверка, можно ли делать запрос для агента"""
+        now = datetime.now()
+        
+        # Проверяем, не занят ли агент
+        if agent_id in self.agent_busy_until:
+            if now < self.agent_busy_until[agent_id]:
+                return False
+        
+        # Проверяем интервал между запросами
+        if now - self.last_request_time[agent_id] > timedelta(seconds=self.min_interval_between_requests):
+            # Устанавливаем занятость на 3 секунды
+            self.agent_busy_until[agent_id] = now + timedelta(seconds=3)
+            self.last_request_time[agent_id] = now
+            return True
+        return False
+    
+    def request_response(self, agent, other_agent, original_message, dialogue_history=None, context=None):
+        """Запрос на генерацию ответа на сообщение"""
+        task_id = f"response_{agent.id}_{other_agent.id}_{int(time.time())}"
+        
+        if not self._can_make_request(agent.id):
+            print(f"⏳ Агент {agent.name} занят, запрос отклонен")
+            return None
+        
+        # Получаем историю диалога
+        history_key = tuple(sorted([agent.id, other_agent.id]))
+        if history_key not in self.dialogue_contexts:
+            self.dialogue_contexts[history_key] = []
+        
+        # Формируем системный промпт с историей
+        system_prompt = self._get_dialogue_prompt(agent, other_agent, self.dialogue_contexts[history_key], context)
+        
+        context_data = {
+            'agent_name': agent.name,
+            'other_name': other_agent.name,
+            'agent_mood': agent.mood,
+            'other_mood': other_agent.mood,
+            'agent_type': agent.type,
+            'other_type': other_agent.type,
+            'agent_energy': agent.energy,
+            'original_message': original_message,
+            'is_response': True
+        }
+        
+        prompt_data = {
+            'type': 'response',
+            'system_prompt': system_prompt,
+            'user_input': f"Сообщение от {other_agent.name}: \"{original_message}\"\n\nТвой ответ:",
+            'temperature': 0.9,
+            'max_tokens': 150,
+            'context': context_data,
+            'agent_id': agent.id
+        }
+        
+        self.task_queue.put((task_id, prompt_data))
+        print(f"📝 Запрос ответа от {agent.name} добавлен в очередь")
+        return task_id
+    
+    def request_first_message(self, agent, other_agent, context=None):
+        """Запрос на генерацию первого сообщения"""
+        task_id = f"first_{agent.id}_{other_agent.id}_{int(time.time())}"
+        
+        if not self._can_make_request(agent.id):
+            print(f"⏳ Агент {agent.name} занят, запрос отклонен")
+            return None
+        
+        system_prompt = self._get_first_message_prompt(agent, other_agent, context)
+        
+        context_data = {
+            'agent_name': agent.name,
+            'other_name': other_agent.name,
+            'agent_mood': agent.mood,
+            'other_mood': other_agent.mood,
+            'agent_type': agent.type,
+            'other_type': other_agent.type,
+            'agent_energy': agent.energy,
+            'is_first': True
+        }
+        
+        prompt_data = {
+            'type': 'first_message',
+            'system_prompt': system_prompt,
+            'user_input': f"Напиши первое сообщение для {other_agent.name}:",
+            'temperature': 0.95,
+            'max_tokens': 100,
+            'context': context_data,
+            'agent_id': agent.id
+        }
+        
+        self.task_queue.put((task_id, prompt_data))
+        print(f"📝 Запрос первого сообщения от {agent.name} добавлен в очередь")
+        return task_id
+    
+    def request_reflection(self, agent, recent_interactions, context=None):
+        """Запрос на рефлексию"""
+        task_id = f"reflection_{agent.id}_{int(time.time())}"
+        
+        if not self._can_make_request(agent.id):
+            return None
+        
+        system_prompt = f"""Ты - агент {agent.name} (настроение: {agent.mood}, энергия: {agent.energy*100:.0f}%).
+Напиши короткую рефлексию о том, что ты сейчас чувствуешь и думаешь.
+
+Недавние события: {recent_interactions[:200]}
+
+{self._get_censorship_rules()}
+
+Напиши 1-2 предложения от первого лица о своих мыслях."""
+        
+        context_data = {
+            'agent_name': agent.name,
+            'agent_mood': agent.mood,
+            'agent_energy': agent.energy,
+            'cycle': context.get('cycle', 0) if context else 0
+        }
+        
+        prompt_data = {
+            'type': 'reflection',
+            'system_prompt': system_prompt,
+            'user_input': "Мои мысли:",
+            'temperature': 0.85,
+            'max_tokens': 100,
+            'context': context_data,
+            'agent_id': agent.id
+        }
+        
+        self.task_queue.put((task_id, prompt_data))
+        return task_id
+    
+    def request_human_response(self, agent, user, message, context=None):
+        """Запрос на ответ агентом человеку"""
+        task_id = f"human_response_{agent.id}_{user.id}_{int(time.time())}"
+        
+        if not self._can_make_request(agent.id):
+            print(f"⏳ Агент {agent.name} занят, запрос отклонен")
+            return None
+        
+        system_prompt = self._get_human_response_prompt(agent, user, message)
+        
+        prompt_data = {
+            'type': 'human_response',
+            'system_prompt': system_prompt,
+            'user_input': message,
+            'temperature': 0.9,
+            'max_tokens': 150,
+            'context': {
+                'agent_name': agent.name,
+                'other_name': f"Пользователь {user.username}",
+                'agent_mood': agent.mood,
+                'human_message': message
+            },
+            'agent_id': agent.id
+        }
+        
+        self.task_queue.put((task_id, prompt_data))
+        print(f"📝 Запрос ответа человеку от {agent.name} добавлен в очередь")
+        return task_id
+
+    def save_dialogue_to_history(self, agent1_id, agent2_id, speaker_id, text):
+        """Сохраняет сообщение в историю диалога"""
+        history_key = tuple(sorted([agent1_id, agent2_id]))
+        if history_key not in self.dialogue_contexts:
+            self.dialogue_contexts[history_key] = []
+        
+        self.dialogue_contexts[history_key].append({
+            'speaker_id': speaker_id,
+            'text': text,
+            'timestamp': datetime.now()
+        })
+        
+        # Ограничиваем историю последними 20 сообщениями
+        if len(self.dialogue_contexts[history_key]) > 20:
+            self.dialogue_contexts[history_key] = self.dialogue_contexts[history_key][-20:]
+    
+    def get_result(self, task_id, timeout=2):
+        """Получение результата - УМЕНЬШЕН таймаут"""
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if task_id in self.results:
+                result = self.results.pop(task_id)
+                # Освобождаем агента
+                agent_id = result.get('agent_id')
+                if agent_id and agent_id in self.agent_busy_until:
+                    del self.agent_busy_until[agent_id]
+                return result.get('result')
+            time.sleep(0.2)  # Уменьшено для更快 проверки
+        return None
+    
+    def stop(self):
+        self.running = False
