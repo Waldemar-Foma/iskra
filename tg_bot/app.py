@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Токен бота
-BOT_TOKEN = "8440516405:AAGDNgis7rSheINVwO26mFdTf7BU5W2K9yY"
+BOT_TOKEN = ""
 
 # Состояния
 NAME, EMAIL, PASSWORD, CONFIRM_PASSWORD, SITE, CHECK_PASS, ADD_PHONE, ADD_NAME, LOGIN = range(9)
@@ -798,4 +798,5 @@ def main() -> None:
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
+
     main()
